@@ -6,7 +6,7 @@ import time
 from datetime import datetime
 
 import RuuviPoller as ruuvi
-from EmailHandler import GmailSender
+import EmailHandler
 import GAPIHelper
 
 programStartTime = time.time()
@@ -25,13 +25,13 @@ tagTimeoutTimeMin = 30 # Notify when tag has not checked in after x minutes
 
 emailDelayTimeSec = 60 * 60 * 3 #Temperature alert emails can be sent only once every 3 hours. (total, not per tag)
 timeoutEmailDelayTimeSec = 60 * 60 * 24 #Timeout emails can be sent only once every 24 hours per RuuviTag
+
+debugMode = False #Set this if you want to ensure that you are not actually sending emails while testing
 #-------------------------------
 GAPIHelper.get_authorization()
 if not GAPIHelper.is_authorized():
     print("All permissions are needed to properly run at the moment. (Maybe later we can feature piece meal!)")
     exit()
-
-emailer = GmailSender(debugOnly=True)
 
 #Tag whitelist from file. User will need to manually edit this once it is created via template
 tagMacFileTemplateLoc = scriptDir + "/RuuviTagMacs_template.csv"
@@ -82,7 +82,7 @@ def check_and_send_temperature_alert(sensorName:str, temperatureF:float):
         message += thresholdOfMsg
         message += f"\nThis message will repeat every {emailDelayTimeSec/60/60} hours until it is resolved.\nSave those plants, good luck!\n\n-The Greenhouse Monitor"
         for email in emailList:
-            status = emailer.send_message(email, "Automatic Greenhouse Temperature Alert", message)
+            status = EmailHandler.send_message(email, "Automatic Greenhouse Temperature Alert", message, debugMode)
             if status != None:
                 lastEmailTime = time.time()
 
@@ -92,7 +92,7 @@ def send_timeout_alert(mac, lastCheckinTime, sensorName:str):
         message += f"This message will repeat in {(timeoutEmailDelayTimeSec/60/60):.2f} hours if it is not resolved.\n"
         message += "\n-The Greenhouse Monitor"
         for email in emailList:
-            status = emailer.send_message(email, "Automatic Greenhouse Timeout Alert", message)
+            status = EmailHandler.send_message(email, "Automatic Greenhouse Timeout Alert", message)
             if status != None:
                 lastTimeoutEmailDict[mac] = time.time()
 
