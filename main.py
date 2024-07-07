@@ -7,6 +7,7 @@ from datetime import datetime
 
 import RuuviPoller as ruuvi
 from EmailHandler import GmailSender
+import GAPIHelper
 
 programStartTime = time.time()
 scriptDir = os.path.dirname(os.path.realpath(__file__))
@@ -25,7 +26,12 @@ tagTimeoutTimeMin = 30 # Notify when tag has not checked in after x minutes
 emailDelayTimeSec = 60 * 60 * 3 #Temperature alert emails can be sent only once every 3 hours. (total, not per tag)
 timeoutEmailDelayTimeSec = 60 * 60 * 24 #Timeout emails can be sent only once every 24 hours per RuuviTag
 #-------------------------------
-emailer = GmailSender(authorizeOnStart=True, debugOnly=False)
+GAPIHelper.get_authorization()
+if not GAPIHelper.is_authorized():
+    print("All permissions are needed to properly run at the moment. (Maybe later we can feature piece meal!)")
+    exit()
+
+emailer = GmailSender(debugOnly=True)
 
 #Tag whitelist from file. User will need to manually edit this once it is created via template
 tagMacFileTemplateLoc = scriptDir + "/RuuviTagMacs_template.csv"
