@@ -7,6 +7,7 @@ from datetime import datetime
 
 import RuuviPoller as ruuvi
 import EmailHandler
+from DataHandler import DataHandler
 import GAPIHelper
 
 programStartTime = time.time()
@@ -14,20 +15,20 @@ scriptDir = os.path.dirname(os.path.realpath(__file__))
 
 #User config. For now, you need to manually edit these. TODO: Put these into a local file.
 #-------------------------------
-pollEvery_thMinute = 10 #Example: 10 = Poll at 3:00, 3:10, 3:20, 3:30, etc. Not well tested.
+pollEvery_thMinute = 1 #Example: 10 = Poll at 3:00, 3:10, 3:20, 3:30, etc. Not well tested.
 
 # Thresholds in Fahrenheit that will prompt the script to send an email alert
-tempThreshUpperF = 110
-tempThreshLowerF = 35
+lowerThresholdF = 35
+upperThresholdF = 82
 
 tagFirstTimeoutMin = 5 # Notify when tag has not checked since script start after x minutes
 tagTimeoutTimeMin = 30 # Notify when tag has not checked in after x minutes
 
-emailDelayTimeSec = 60 * 60 * 3 #Temperature alert emails can be sent only once every 3 hours. (total, not per tag)
 timeoutEmailDelayTimeSec = 60 * 60 * 24 #Timeout emails can be sent only once every 24 hours per RuuviTag
 
-debugMode = False #Set this if you want to ensure that you are not actually sending emails while testing
+debugMode = True #Set this if you want to ensure that you are not actually sending emails while testing
 #-------------------------------
+
 GAPIHelper.get_authorization()
 if not GAPIHelper.is_authorized():
     print("All permissions are needed to properly run at the moment. (Maybe later we can feature piece meal!)")
@@ -53,80 +54,29 @@ with open(tagMacFileLoc, 'r') as macFile:
 
 whitelist = list(macToName.keys())
 
-lastEmailTime = float('-inf')
+#TODO: Consider combining into a class
 lastTimeoutEmailDict = {}
-for mac in macToName.keys():
+ruuviTagDataHandler:dict[str, DataHandler] = {}
+for mac, name in macToName.items():
     lastTimeoutEmailDict[mac] = float('-inf')
-
-emailListLoc = scriptDir+"/EmailList.txt"
-emailList = []
-try:
-    with open(emailListLoc, 'r') as emailFile:
-        emailList = [line.strip() for line in emailFile]
-except:
-    pass
-if emailList == []:
-    print(f"Please add emails to the following file if you would like to use the email alert feature.\n{emailListLoc}")
-
-def check_and_send_temperature_alert(sensorName:str, temperatureF:float):
-    if temperatureF > tempThreshUpperF:
-        thresholdOfMsg = f"upper threshold of {tempThreshUpperF:.2f}F.\n"
-    elif temperatureF < tempThreshLowerF:
-        thresholdOfMsg = f"lower threshold of {tempThreshLowerF:.2f}F.\n"
-    else:
-        return #No alert needed, all is well!
-
-    global lastEmailTime
-    if time.time() >= lastEmailTime + emailDelayTimeSec:
-        message = f"The greenhouse sensor '{sensorName}' is currently at {temperatureF:.2f}F and has exceeded the "
-        message += thresholdOfMsg
-        message += f"\nThis message will repeat every {emailDelayTimeSec/60/60} hours until it is resolved.\nSave those plants, good luck!\n\n-The Greenhouse Monitor"
-        for email in emailList:
-            status = EmailHandler.send_message(email, "Automatic Greenhouse Temperature Alert", message, debugMode)
-            if status != None:
-                lastEmailTime = time.time()
+    ruuviTagDataHandler[mac] = DataHandler(mac, name, upperThresholdF, lowerThresholdF, 3, debugOnly = debugMode)
 
 def send_timeout_alert(mac, lastCheckinTime, sensorName:str):
     if time.time() >=  lastTimeoutEmailDict[mac] + timeoutEmailDelayTimeSec:
         message = f"The greenhouse sensor '{sensorName}' has not sent a signal in {lastCheckinTime:.2f} minutes. Verify it is still within range and the battery is good.\n"
         message += f"This message will repeat in {(timeoutEmailDelayTimeSec/60/60):.2f} hours if it is not resolved.\n"
         message += "\n-The Greenhouse Monitor"
-        for email in emailList:
-            status = EmailHandler.send_message(email, "Automatic Greenhouse Timeout Alert", message)
-            if status != None:
-                lastTimeoutEmailDict[mac] = time.time()
+        status = EmailHandler.send_message("Automatic Greenhouse Timeout Alert", message, rxEmails=None, debugOnly=debugMode)
+        if status != None:
+            lastTimeoutEmailDict[mac] = time.time()
 
 def handle_tag_data(tagData):
     for mac in whitelist:
         if mac not in tagData:
             print(f"{macToName[mac]}({mac}) did not collect data")
             continue
-
         data = tagData[mac]
-        data.data.pop("acceleration")
-        data.data.pop("acceleration_x")
-        data.data.pop("acceleration_y")
-        data.data.pop("acceleration_z")
-        data.data.pop("tx_power")
-        data.data.pop("movement_counter")
-        data.data.pop("data_format")
-        tempF = data.data['temperature'] * 1.8 + 32 #'merica!
-        data.data['temperature'] = tempF
-
-        check_and_send_temperature_alert(macToName[mac], tempF)
-
-        #Save to CSV file
-        last2Mac = "".join(mac.split(":")[-2:])
-        filepath = f"{scriptDir}/{macToName[mac]}({last2Mac})_data.csv"
-        #TODO Error handling
-        dataToWrite = ""
-        if not os.path.isfile(filepath):
-            dataToWrite = "time,timestamp," + ",".join(data.data.keys()) + "\n"
-        readableTime = datetime.fromtimestamp(data.timestamp).strftime('%Y-%m-%d %H:%M:%S')
-        dataToWrite += readableTime + "," + str(data.timestamp) + "," + ",".join([str(val) for val in data.data.values()]) + "\n"
-        with open(filepath, 'a+') as dataFile:
-            dataFile.write(dataToWrite)
-        print(f"{macToName[mac]} was {data.data['temperature']:.2f}F on {readableTime}")
+        ruuviTagDataHandler[mac].handle_data(data)
 
 async def check_tag_timeout():
     for mac, name in macToName.items():

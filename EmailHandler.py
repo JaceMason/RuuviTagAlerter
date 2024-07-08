@@ -10,19 +10,31 @@ import os
 
 scriptDir = os.path.dirname(os.path.realpath(__file__))
 
+emailListPath = scriptDir+"/EmailList.txt"
+emailList = []
+try:
+    with open(emailListPath, 'r') as emailFile:
+        emailList = [line.strip() for line in emailFile]
+except:
+    pass
+if emailList == []:
+    print(f"Please add emails to the following file if you would like to use the email alert feature.\n{os.path.normpath(emailListPath)}")
+
 @GAPIHelper.authorize
-def create_message(rxEmail, subject, messageText):
+def create_message(rxEmails:list[str], subject, messageText):
     userinfo = build('oauth2', 'v2', credentials=GAPIHelper.userToken).userinfo().get().execute()
     txEmail = userinfo.get('email')
     message = MIMEText(messageText)
-    message['to'] = rxEmail
+    message['to'] = ", ".join(rxEmails)
     message['from'] = txEmail
     message['subject'] = subject
     return {'raw': base64.urlsafe_b64encode(message.as_bytes('utf-8')).decode()}
 
 @GAPIHelper.authorize
-def send_message(rxEmail:str, subject:str, messageText:str, debugOnly:bool = False):
-    rawMessage = create_message(rxEmail, subject, messageText)
+def send_message(subject:str, messageText:str, rxEmails:list[str] = None, debugOnly:bool = False):
+    if rxEmails == None:
+        rxEmails = emailList
+    rawMessage = create_message(rxEmails, subject, messageText)
     try:
         if debugOnly:
             print("I am not actually going to send that email. I am in debug only mode!")
