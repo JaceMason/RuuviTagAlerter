@@ -1,6 +1,3 @@
-from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build
-
 import GAPIHelper
 
 from email.mime.text import MIMEText
@@ -22,7 +19,7 @@ if emailList == []:
 
 @GAPIHelper.authorize
 def create_message(rxEmails:list[str], subject, messageText):
-    userinfo = build('oauth2', 'v2', credentials=GAPIHelper.userToken).userinfo().get().execute()
+    userinfo = GAPIHelper.infoService.userinfo().get().execute()
     txEmail = userinfo.get('email')
     message = MIMEText(messageText)
     message['to'] = ", ".join(rxEmails)
@@ -40,7 +37,7 @@ def send_message(subject:str, messageText:str, rxEmails:list[str] = None, debugO
             print("I am not actually going to send that email. I am in debug only mode!")
             return 0
 
-        message = (build('gmail', 'v1', credentials=GAPIHelper.userToken).users().messages().send(userId='me', body=rawMessage).execute())
+        message = (GAPIHelper.gmailService.users().messages().send(userId='me', body=rawMessage).execute())
         return message['id']
     except Exception as error:
         print(error)

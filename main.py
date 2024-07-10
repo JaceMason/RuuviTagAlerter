@@ -15,7 +15,7 @@ scriptDir = os.path.dirname(os.path.realpath(__file__))
 
 #User config. For now, you need to manually edit these. TODO: Put these into a local file.
 #-------------------------------
-pollEvery_thMinute = 1 #Example: 10 = Poll at 3:00, 3:10, 3:20, 3:30, etc. Not well tested.
+pollEvery_thMinute = 5 #Example: 10 = Poll at 3:00, 3:10, 3:20, 3:30, etc. Not well tested.
 
 # Thresholds in Fahrenheit that will prompt the script to send an email alert
 lowerThresholdF = 35
@@ -26,7 +26,7 @@ tagTimeoutTimeMin = 30 # Notify when tag has not checked in after x minutes
 
 timeoutEmailDelayTimeSec = 60 * 60 * 24 #Timeout emails can be sent only once every 24 hours per RuuviTag
 
-debugMode = True #Set this if you want to ensure that you are not actually sending emails while testing
+debugMode = False #Set this if you want to ensure that you are not actually sending emails while testing
 #-------------------------------
 
 GAPIHelper.get_authorization()

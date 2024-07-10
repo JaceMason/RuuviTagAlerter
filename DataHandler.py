@@ -2,6 +2,8 @@ import os
 import time
 from datetime import datetime
 
+import GAPIHelper
+
 import EmailHandler
 from RuuviPoller import RuuviData
 
@@ -25,6 +27,8 @@ class DataHandler:
 
         self.emailDelayTimeSec = 60 * 60 * emailAlertTimeoutHour
         self.lastEmailTime = float('-inf')
+
+        self.fileId = 0
 
         self.debugOnly = debugOnly
 
@@ -55,14 +59,20 @@ class DataHandler:
         data.data["temperature"] = data.data['temperature'] * 1.8 + 32 #'merica!
         self.check_and_send_temperature_alert(data.data["temperature"])
 
+        readableTime = datetime.fromtimestamp(data.timestamp).strftime('%Y-%m-%d %H:%M:%S')
+
         #Save to CSV file
         filepath = f"{scriptDir}/{self.sensorId}_data.csv"
         #TODO Error handling
-        dataToWrite = ""
+        headerLine = "time,timestamp," + ",".join(data.data.keys()) + "\n"
+        dataLine = readableTime + "," + str(data.timestamp) + "," + ",".join([str(val) for val in data.data.values()]) + "\n"
+
+        newLocalFileData = ""
         if not os.path.isfile(filepath):
-            dataToWrite = "time,timestamp," + ",".join(data.data.keys()) + "\n"
-        readableTime = datetime.fromtimestamp(data.timestamp).strftime('%Y-%m-%d %H:%M:%S')
-        dataToWrite += readableTime + "," + str(data.timestamp) + "," + ",".join([str(val) for val in data.data.values()]) + "\n"
+            newLocalFileData = headerLine
+        newLocalFileData += dataLine
         with open(filepath, 'a+') as dataFile:
-            dataFile.write(dataToWrite)
+            dataFile.write(newLocalFileData)
+
         print(f"{self.sensorId} was {data.data['temperature']:.2f}F on {readableTime}")
+        self.fileId = GAPIHelper.append_to_sheet(headerLine, dataLine, self.fileId, 'data', self.sensorId)
