@@ -3,6 +3,7 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.errors import HttpError
 from googleapiclient.discovery import build
+import time
 
 import os
 
@@ -157,7 +158,10 @@ def append_to_sheet(headerLine, dataLine, fileId, folderName, fileName):
                 folderId = find_object_make_if_none('folder', folderName, 'root')
                 if folderId:
                     fileId = find_object_make_if_none('spreadsheet', fileName, folderId)
+        except Exception as e:
+            print(e)
         retryCount -= 1
+        time.sleep(.5)
 
     if not fileId:
         return 0

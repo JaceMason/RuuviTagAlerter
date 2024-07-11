@@ -21,6 +21,8 @@ pollEvery_thMinute = 5 #Example: 10 = Poll at 3:00, 3:10, 3:20, 3:30, etc. Not w
 lowerThresholdF = 35
 upperThresholdF = 82
 
+emailAlertTimeoutHr = 5 # Send an email every x hours until the temperature goes back within bounds.
+
 tagFirstTimeoutMin = 5 # Notify when tag has not checked since script start after x minutes
 tagTimeoutTimeMin = 30 # Notify when tag has not checked in after x minutes
 
@@ -59,7 +61,7 @@ lastTimeoutEmailDict = {}
 ruuviTagDataHandler:dict[str, DataHandler] = {}
 for mac, name in macToName.items():
     lastTimeoutEmailDict[mac] = float('-inf')
-    ruuviTagDataHandler[mac] = DataHandler(mac, name, upperThresholdF, lowerThresholdF, 3, debugOnly = debugMode)
+    ruuviTagDataHandler[mac] = DataHandler(mac, name, upperThresholdF, lowerThresholdF, emailAlertTimeoutHr, debugOnly = debugMode)
 
 def send_timeout_alert(mac, lastCheckinTime, sensorName:str):
     if time.time() >=  lastTimeoutEmailDict[mac] + timeoutEmailDelayTimeSec:
@@ -75,8 +77,7 @@ def handle_tag_data(tagData):
         if mac not in tagData:
             print(f"{macToName[mac]}({mac}) did not collect data")
             continue
-        data = tagData[mac]
-        ruuviTagDataHandler[mac].handle_data(data)
+        ruuviTagDataHandler[mac].handle_data(tagData[mac])
 
 async def check_tag_timeout():
     for mac, name in macToName.items():
