@@ -1,6 +1,8 @@
 import asyncio
-from datetime import datetime
+
 from dataclasses import dataclass
+from datetime import datetime
+
 from ruuvitag_sensor.ruuvi import RuuviTagSensor
 
 @dataclass

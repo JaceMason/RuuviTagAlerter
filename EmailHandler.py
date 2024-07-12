@@ -1,9 +1,10 @@
-import GAPIHelper
+import base64
+import os
 
 from email.mime.text import MIMEText
 
-import base64
-import os
+import GAPIHelper
+
 
 scriptDir = os.path.dirname(os.path.realpath(__file__))
 

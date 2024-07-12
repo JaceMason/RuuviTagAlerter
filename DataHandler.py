@@ -2,9 +2,8 @@ import os
 import time
 from datetime import datetime
 
-import GAPIHelper
-
 import EmailHandler
+import GAPIHelper
 from RuuviPoller import RuuviData
 
 scriptDir = os.path.dirname(os.path.realpath(__file__))

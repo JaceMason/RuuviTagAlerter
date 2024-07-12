@@ -3,9 +3,10 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.errors import HttpError
 from googleapiclient.discovery import build
-import time
-
+import csv
 import os
+import time
+from io import StringIO
 
 scriptDir = os.path.dirname(os.path.realpath(__file__))
 defaultAppTokenLoc = f"{scriptDir}/AppToken.json"
@@ -126,7 +127,8 @@ def find_object_make_if_none(objType, objName, parentFolderId):
 @authorize
 def write_to_sheet(fileId, lineNum, data):
     cellRange = f"Sheet1!A{lineNum}"
-    toWrite = {'values': [data.split(',')]}
+    listifiedData = list(csv.reader(StringIO(data)))
+    toWrite = {'values': listifiedData}
     try:
         response = sheetsService.spreadsheets().values().update(
             spreadsheetId=fileId, range=cellRange,
@@ -138,6 +140,15 @@ def write_to_sheet(fileId, lineNum, data):
     else:
         return 0
 
+@authorize
+def get_full_sheet(fileId, sheetName):
+    cellRange = sheetName
+    try:
+        response = sheetsService.spreadsheets().values().get(spreadsheetId=fileId, range=cellRange).execute()
+    except Exception as e:
+        print(e)
+        None
+    return response.get("values", [[]])
 
 #If fileId is '0', it will find/make the file. This function will return the fileId for the file it wrote to. 0 if failed
 @authorize

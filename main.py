@@ -5,10 +5,10 @@ import time
 
 from datetime import datetime
 
-import RuuviPoller as ruuvi
 import EmailHandler
-from DataHandler import DataHandler
 import GAPIHelper
+from DataHandler import DataHandler
+import RuuviPoller as ruuvi
 
 programStartTime = time.time()
 scriptDir = os.path.dirname(os.path.realpath(__file__))
