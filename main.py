@@ -16,7 +16,7 @@ scriptDir = os.path.dirname(os.path.realpath(__file__))
 
 #User config. For now, you need to manually edit these. TODO: Put these into a local file.
 #-------------------------------
-pollEvery_thMinute = 10 #Example: 10 = Poll at 3:00, 3:10, 3:20, 3:30, etc. Not well tested.
+pollEvery_thMinute = 5 #Example: 10 = Poll at 3:00, 3:10, 3:20, 3:30, etc. Not well tested.
 
 emailAlertTimeoutHr = 5 # Send an email every x hours until the temperature goes back within bounds.
 

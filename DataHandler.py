@@ -9,6 +9,7 @@ from ConfigManager import RuuviConfig
 from RuuviPoller import RuuviData
 
 scriptDir = os.path.dirname(os.path.realpath(__file__))
+dataFolderName = "data"
 
 unwantedHeaders = [
         "acceleration",
@@ -56,11 +57,13 @@ class DataHandler:
 
         #Save to CSV file
         sensorId = config.name + self.shortmac
-        filepath = f"{scriptDir}/{sensorId}"
+        dataFolderPath = f"{scriptDir}/{dataFolderName}/"
+        filepath = f"{dataFolderPath}{sensorId}_data.csv"
         #TODO Error handling
         headerLine = "time,timestamp," + ",".join(data.data.keys()) + "\n"
         dataLine = readableTime + "," + str(data.timestamp) + "," + ",".join([str(val) for val in data.data.values()]) + "\n"
 
+        os.makedirs(dataFolderPath, exist_ok=True)
         newLocalFileData = ""
         if not os.path.isfile(filepath):
             newLocalFileData = headerLine
