@@ -1,3 +1,4 @@
+import csv
 import os
 from dataclasses import dataclass
 
@@ -11,24 +12,53 @@ class RuuviConfig:
     name:str = ""
     lowerThresholdF:float = float("-inf")
     upperThresholdF:float = float("inf")
-    disable:bool = True
+    enabled:bool = False
 
-    def __init__(self, name=None, lowerF=None, upperF=None, disabled=None):
-        if(disabled==None): #discount default constructor.
+    def __init__(self, name=None, lowerF=None, upperF=None, enabled=None):
+        if(enabled==None): #discount default constructor.
             return
         self.name = name
-        self.lowerThresholdF = lowerF
-        self.upperThresholdF = upperF
-        self.disable = disabled
+
+        try:
+            self.lowerThresholdF = float(lowerF)
+        except:
+            self.lowerThresholdF = float("-inf")
+
+        try:
+            self.upperThresholdF = float(upperF)
+        except:
+            self.upperThresholdF = float("inf")
+
+        if type(enabled) == str:
+            enTxt = enabled.lower()
+            if enTxt=="true" or enTxt=="yes" or enTxt == "1":
+                self.enabled = True
+        else:
+            self.enabled = bool(enabled)
 
     def stringify(self, mac):
-        return f"{mac},{self.name},{self.lowerThresholdF},{self.upperThresholdF},{self.disable}\n"
+        return f"{mac},{self.name},{self.lowerThresholdF},{self.upperThresholdF},{self.enabled}\n"
 
-configFileHeaders = "Mac,Name,Lower_Threshold_F,Upper_Threshold_F,Disable\n"
+configFileHeaders = "Mac,Name,Lower_Threshold_F,Upper_Threshold_F,Enabled\n"
 configFileName = "RuuviConfig.csv"
 
-tagConfigs = {}
+tagConfigs:dict[str, RuuviConfig] = {}
 firstTimeStart = True
+
+def create_config_from_csv_list(listifiedData):
+    config = {}
+    for row in listifiedData[1:]:
+        config[row[0]] = RuuviConfig(row[1], row[2], row[3], row[4])
+    return config
+
+def load_local_file():
+    global tagConfigs
+    try:
+        with open(scriptDir + "/" + configFileName, 'r') as localConfig:
+            listifiedData = list(csv.reader(localConfig))
+            tagConfigs = create_config_from_csv_list(listifiedData)
+    except FileNotFoundError:
+        pass #Will be made later
 
 def get_config_csv():
     csvString = configFileHeaders
@@ -45,9 +75,9 @@ def write_local_config(csvString):
     except:
         pass
 
-def get_latest_config(tagList):
+def get_latest_config(recentMacs):
     global tagConfigs
-    for tag in tagList:
+    for tag in recentMacs:
         tagConfigs.setdefault(tag, RuuviConfig())
 
     parentFolderId = gapi.find_object_make_if_none("folder", "config", "root")
@@ -59,10 +89,7 @@ def get_latest_config(tagList):
 
     #Latest config is built up from the web first (taking priority), then anything local is added which should be just completely new tags.
     #The result is saved off in program memory, locally, and online
-    configFromOnline = {}
-    for row in latestConfig[1:]:
-        mac = row[0]
-        configFromOnline[mac] = RuuviConfig(row[1], row[2], row[3], row[4])
+    configFromOnline = create_config_from_csv_list(latestConfig)
 
     configToUpload = configFromOnline.copy()
     for tag in tagConfigs:
