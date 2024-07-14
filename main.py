@@ -62,6 +62,9 @@ def send_timeout_alert(mac, lastCheckinTimeMin:float, sensorName:str, neverCheck
 def handle_tag_data(tagData):
     recentMacs = list(tagData.keys())
     config.get_latest_config(recentMacs)
+    for mac in recentMacs:
+        ruuviTagDataHandler.setdefault(mac, DataHandler(mac, emailAlertTimeoutHr))
+
     for mac, cfg in config.tagConfigs.items():
         if not cfg.enabled:
             continue
@@ -88,6 +91,7 @@ async def check_tag_timeout():
 async def main():
     #TODO: need to find a way to gracefully stop this task while it is stuck waiting for the generator
     task = asyncio.create_task(ruuvi.polltags([]))
+    asyncio.gather(task) #Let's us see exceptions instead of it failing silently. (Does not stop anything yet)
 
     while True:
         #Get latest tag data at the start of every 10th minute (Based on system clock)

@@ -41,7 +41,9 @@ class DataHandler:
         if time.time() >= self.lastEmailTime + self.emailDelayTimeSec:
             message = f"The greenhouse sensor '{config.name} {self.shortmac}' is currently at {temperatureF:.2f}F and has exceeded the "
             message += thresholdOfMsg
-            message += f"\nThis message will repeat every {self.emailDelayTimeSec/60/60} hours until it is resolved.\nSave those plants, good luck!\n\n-The Greenhouse Monitor"
+            message += f"\nThis message will repeat every {self.emailDelayTimeSec/60/60} hours until it is resolved.\nSave those plants, good luck!"
+            print(message)
+            message += "\n\n-The Greenhouse Monitor"
             status = EmailHandler.send_message("Automatic Greenhouse Temperature Alert", message, rxEmails=None)
             if status != None:
                 self.lastEmailTime = time.time()

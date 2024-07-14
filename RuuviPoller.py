@@ -1,5 +1,8 @@
 import asyncio
 
+import os
+os.environ["RUUVI_BLE_ADAPTER"] = "bleak"
+
 from dataclasses import dataclass
 from datetime import datetime
 

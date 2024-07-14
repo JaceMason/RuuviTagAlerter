@@ -77,6 +77,9 @@ def write_local_config(csvString):
 
 def get_latest_config(recentMacs):
     global tagConfigs
+    if recentMacs == []:
+        return #If we didn't get any tags this round, then there is nothing to be done here.
+
     for tag in recentMacs:
         tagConfigs.setdefault(tag, RuuviConfig())
 
