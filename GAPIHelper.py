@@ -1,5 +1,6 @@
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
+import google.auth.exceptions as g_exception
 from google.oauth2.credentials import Credentials
 from googleapiclient.errors import HttpError
 from googleapiclient.discovery import build
@@ -78,7 +79,11 @@ def get_authorization():
         return create_resources()
 
     if userToken.expired and userToken.refresh_token:
-        userToken.refresh(Request())
+        try:
+            userToken.refresh(Request())
+        except g_exception.RefreshError:
+            pass
+
         if userToken.valid:
             return create_resources()
 
