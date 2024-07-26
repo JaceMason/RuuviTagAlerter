@@ -9,6 +9,8 @@ import os
 import time
 from io import StringIO
 
+import Log
+
 scriptDir = os.path.dirname(os.path.realpath(__file__))
 defaultAppTokenLoc = f"{scriptDir}/AppToken.json"
 defaultUserTokenLoc = f"{scriptDir}/UserToken.json"
@@ -162,22 +164,27 @@ def append_to_sheet(headerLine, dataLine, fileId, folderName, fileName):
     nextLineNum = 1
     cellRange = "Sheet1!A:A"
     # We really don't want to spam Google's API a billion times, so prevent any infinite looping
-    retryCount = 3
-    while retryCount > 0:
+    retriesLeft = 5
+    while retriesLeft > 0:
         try:
             response = sheetsService.spreadsheets().values().get(spreadsheetId=fileId, range=cellRange).execute()
             if 'values' in response:
                 nextLineNum = len(response['values']) + 1
             break
-        except HttpError as e:
-            if e.resp.status == 404:
+        except Exception as e:
+            if type(e) == HttpError and e.resp.status == 404:
                 folderId = find_object_make_if_none('folder', folderName, 'root')
                 if folderId:
                     fileId = find_object_make_if_none('spreadsheet', fileName, folderId)
-        except Exception as e:
-            print(e)
-        retryCount -= 1
-        time.sleep(.5)
+            else:
+                Log.log(str(e))
+
+            if retriesLeft == 0:
+                return 0
+
+        retriesLeft -= 1
+        time.sleep(2)
+
 
     if not fileId:
         return 0

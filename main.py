@@ -1,15 +1,18 @@
 import asyncio
 import os
-import shutil
 import time
-
-from datetime import datetime
+import signal
 
 import EmailHandler
 import GAPIHelper
+import Log
+
 import ConfigManager as config
 import RuuviPoller as ruuvi
 from DataHandler import DataHandler
+
+#For better termination when run as a service
+signal.signal(signal.SIGTERM, lambda num, frame:exit())
 
 programStartTime = time.time()
 scriptDir = os.path.dirname(os.path.realpath(__file__))
@@ -93,15 +96,27 @@ async def main():
     task = asyncio.create_task(ruuvi.polltags([]))
     asyncio.gather(task) #Let's us see exceptions instead of it failing silently. (Does not stop anything yet)
 
+    failcount = 0
     while True:
         #Get latest tag data at the start of every 10th minute (Based on system clock)
         timeDiff = pollEvery_thMinute*60 - int(time.time()) % (pollEvery_thMinute*60)
         print(f"Next poll in {timeDiff/60:.2f}minutes [{timeDiff}seconds]")
         await asyncio.sleep(timeDiff)
 
-        tagData = await ruuvi.getLatestData()
-        handle_tag_data(tagData)
-        await check_tag_timeout()
+        try:
+            tagData = await ruuvi.getLatestData()
+            handle_tag_data(tagData)
+            await check_tag_timeout()
+            failcount = 0
+        except Exception as e:
+            failcount += 1
+            Log.log(str(e))
+
+        #Bit of backoff. Don't ever want to terminate the program, but don't want to be spamming the network
+        if failcount > 1:
+            await asyncio.sleep(60 * 10 * min(failcount, 6))
+
+
         
 
 if __name__ == "__main__":
