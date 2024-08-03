@@ -62,7 +62,7 @@ def generate_token_via_user():
         with open(userTokenLoc, 'w') as tokenFile:
             tokenFile.write(userToken.to_json())
     except:
-        print(f"Unable to save user credentials. Ensure that {os.path.normpath(userTokenLoc)} is not open elsewhere. You will need to sign in again next restart.")
+        Log.log(f"Unable to save user credentials. Ensure that {os.path.normpath(userTokenLoc)} is not open elsewhere. You will need to sign in again next restart.")
 
 def load_token_from_file():
     global userToken
@@ -70,7 +70,7 @@ def load_token_from_file():
         try:
             userToken = Credentials.from_authorized_user_file(userTokenLoc, appScope)
         except:
-            print(f"Unable to open existing user credentials. Ensure that this script has read/write permissions for {userTokenLoc}")
+            Log.log(f"Unable to open existing user credentials. Ensure that this script has read/write permissions for {userTokenLoc}")
 
 def get_authorization():
     if userToken.valid:
@@ -105,7 +105,8 @@ def create_resources():
         sheetsService = build('sheets', 'v4', credentials=userToken)
         infoService = build('oauth2', 'v2', credentials=userToken)
         gmailService = build('gmail', 'v1', credentials=userToken)
-    except:
+    except Exception as e:
+        Log.log("create_resources: %" % str(e))
         return False
     return True
 
@@ -115,7 +116,8 @@ def find_object_make_if_none(objType, objName, parentFolderId):
     query = f"name = '{objName}' and mimeType = 'application/vnd.google-apps.{objType}' and '{parentFolderId}' in parents and trashed = false"
     try:
         response = driveService.files().list(q=query, fields="files(id, name)").execute()
-    except:
+    except Exception as e:
+        Log.log("find_object_make_if_none: %s" % str(e))
         return 0
     respFiles = response.get('files', [])
     if respFiles:
@@ -124,7 +126,8 @@ def find_object_make_if_none(objType, objName, parentFolderId):
         metadata = {'name': objName, 'mimeType': f'application/vnd.google-apps.{objType}', 'parents': [parentFolderId]}
         try:
             response = driveService.files().create(body=metadata, fields='id').execute()
-        except:
+        except Exception as e:
+            Log.log("find_object_make_if_none: %s" % str(e))
             return 0
         if 'id' in response:
             objectId = response['id']
@@ -140,7 +143,8 @@ def write_to_sheet(fileId, lineNum, data):
         response = sheetsService.spreadsheets().values().update(
             spreadsheetId=fileId, range=cellRange,
             valueInputOption='USER_ENTERED', body=toWrite).execute()
-    except:
+    except Exception as e:
+        Log.log("write_to_sheet: %s" % str(e))
         return 0
     if 'updatedCells' in response:
         return fileId
@@ -153,8 +157,8 @@ def get_full_sheet(fileId, sheetName):
     try:
         response = sheetsService.spreadsheets().values().get(spreadsheetId=fileId, range=cellRange).execute()
     except Exception as e:
-        print(e)
-        None
+        Log.log("get_full_sheet: %s" % str(e))
+        return None
     return response.get("values", [[]])
 
 #If fileId is '0', it will find/make the file. This function will return the fileId for the file it wrote to. 0 if failed
@@ -177,7 +181,7 @@ def append_to_sheet(headerLine, dataLine, fileId, folderName, fileName):
                 if folderId:
                     fileId = find_object_make_if_none('spreadsheet', fileName, folderId)
             else:
-                Log.log(str(e))
+                Log.log("write_to_sheet: %s" % str(e))
 
             if retriesLeft == 0:
                 return 0

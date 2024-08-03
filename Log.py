@@ -4,7 +4,7 @@ import os
 
 scriptDir = os.path.dirname(os.path.realpath(__file__))
 logFilePath = scriptDir + "/ErrorLogs.txt"
-maxEntries = 100
+maxEntries = 1000
 
 def log(message:str):
     print(message)
