@@ -8,6 +8,8 @@ from datetime import datetime
 
 from ruuvitag_sensor.ruuvi import RuuviTagSensor
 
+from Log import log
+
 @dataclass
 class RuuviData:
     timestamp:int
@@ -29,9 +31,14 @@ async def polltags(whitelist):
                     #Always overwrite the old data because we only care about the latest.
                     activeTagData[mac] = RuuviData(timestamp, found_data[1])
                     lastTagCheckIn[mac] = timestamp
-        except StopAsyncIteration:
-            del(generator) #This doesn't actually stop the previous subprocess.
-            print("ERROR: Generator terminated unexpectedly.")
+        except Exception as e:
+            if type(e) ==  StopAsyncIteration:
+                log("Generator terminated unexpectedly.")
+                del(generator) #This doesn't actually stop the previous subprocess.
+            else:
+                log("polltags: %s" % str(e))
+
+
 
 async def minutes_since_last_checkin(mac:str)->float|None:
     async with tagDataSem:
