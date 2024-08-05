@@ -1,4 +1,7 @@
 import os
+from datetime import datetime
+
+import GAPIHelper as gapi
 
 # TODO maybe replace with logging library later
 
@@ -7,6 +10,8 @@ logFilePath = scriptDir + "/ErrorLogs.txt"
 maxEntries = 1000
 
 def log(message:str):
+    message = datetime.now().strftime("%m/%d/%Y, %H:%M:%S: ") + message
+
     print(message)
     with open(logFilePath, 'a+') as logfile:
         logfile.write(message + "\n")
@@ -18,4 +23,4 @@ def log(message:str):
             logfile.writelines(lines)
 
 def push_log_to_drive():
-    pass
+    gapi.upload_text_file(logFilePath)

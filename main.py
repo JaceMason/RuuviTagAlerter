@@ -27,6 +27,8 @@ tagTimeoutTimeMin = 30 # Notify when tag has not checked in after x minutes
 
 timeoutEmailDelayTimeSec = 60 * 60 * 24 #Timeout emails can be sent only once every 24 hours per RuuviTag
 
+uploadErrorLogIntervalSec = 60 * 60 #Put the error log into drives once every hour
+
 debugMode = False #Set this if you want to ensure that you are not actually sending emails while testing
 #-------------------------------
 
@@ -95,6 +97,7 @@ async def main():
     #TODO: need to find a way to gracefully stop this task while it is stuck waiting for the generator
     task = asyncio.create_task(ruuvi.polltags([]))
     asyncio.gather(task) #Let's us see exceptions instead of it failing silently. (Does not stop anything yet)
+    nextErrorLogUpload = time.time() + uploadErrorLogIntervalSec
 
     failcount = 0
     while True:
@@ -112,12 +115,14 @@ async def main():
             failcount += 1
             Log.log(str(e))
 
+        if time.time() > nextErrorLogUpload:
+            if Log.push_log_to_drive():
+                nextErrorLogUpload = time.time() + uploadErrorLogIntervalSec
+
         #Bit of backoff. Don't ever want to terminate the program, but don't want to be spamming the network
         if failcount > 1:
             await asyncio.sleep(60 * 10 * min(failcount, 6))
 
-
-        
 
 if __name__ == "__main__":
     asyncio.run(main())

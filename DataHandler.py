@@ -74,4 +74,4 @@ class DataHandler:
             dataFile.write(newLocalFileData)
 
         print(f"{sensorId} was {data.data['temperature']:.2f}F on {readableTime}")
-        self.fileId = GAPIHelper.append_to_sheet(headerLine, dataLine, self.fileId, 'data', sensorId)
+        self.fileId = GAPIHelper.append_to_sheet(headerLine, dataLine, self.fileId, dataFolderName, sensorId)

@@ -3,6 +3,7 @@ import os
 from dataclasses import dataclass
 
 import GAPIHelper as gapi
+from Log import log
 
 scriptDir = os.path.dirname(os.path.realpath(__file__))
 
@@ -83,11 +84,19 @@ def get_latest_config(recentMacs):
     for tag in recentMacs:
         tagConfigs.setdefault(tag, RuuviConfig())
 
-    parentFolderId = gapi.find_object_make_if_none("folder", "config", "root")
-    sheetId = gapi.find_object_make_if_none("spreadsheet", "RuuviConfig", parentFolderId)
+    parentFolderId = gapi.find_object(gapi.obj.folder, "config", "root")
+    if parentFolderId == 0:
+        log("Unable to get the latest config")
+        return
+
+    sheetId = gapi.find_object(gapi.obj.sheet, "RuuviConfig", parentFolderId)
+    if sheetId == 0:
+        log("Unable to get the latest config")
+        return
+
     latestConfig = gapi.get_full_sheet(sheetId, "sheet1")
     if latestConfig == None:
-        print("Something went wrong while getting the latest config")
+        log("Unable to get the latest config")
         return
 
     #Latest config is built up from the web first (taking priority), then anything local is added which should be just completely new tags.

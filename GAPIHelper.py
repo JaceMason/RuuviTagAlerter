@@ -1,15 +1,24 @@
+import google.auth.exceptions as g_exception
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
-import google.auth.exceptions as g_exception
 from google.oauth2.credentials import Credentials
-from googleapiclient.errors import HttpError
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+from googleapiclient.http import MediaFileUpload
+
 import csv
 import os
 import time
+
+from enum import Enum
 from io import StringIO
 
 import Log
+
+class obj(Enum):
+    folder = "application/vnd.google-apps.folder"
+    sheet = "application/vnd.google-apps.spreadsheet"
+    text = "text/plain"
 
 scriptDir = os.path.dirname(os.path.realpath(__file__))
 defaultAppTokenLoc = f"{scriptDir}/AppToken.json"
@@ -111,23 +120,23 @@ def create_resources():
     return True
 
 @authorize
-def find_object_make_if_none(objType, objName, parentFolderId):
+def find_object(objType:obj, objName:str, parentFolderId:str, makeIfNone:bool=True):
     objectId = 0
-    query = f"name = '{objName}' and mimeType = 'application/vnd.google-apps.{objType}' and '{parentFolderId}' in parents and trashed = false"
+    query = f"name = '{objName}' and mimeType = '{objType.value}' and '{parentFolderId}' in parents and trashed = false"
     try:
         response = driveService.files().list(q=query, fields="files(id, name)").execute()
     except Exception as e:
-        Log.log("find_object_make_if_none: %s" % str(e))
+        Log.log("find_object: %s" % str(e))
         return 0
     respFiles = response.get('files', [])
     if respFiles:
         objectId = respFiles[0]['id']
-    else: #Create the object instead
-        metadata = {'name': objName, 'mimeType': f'application/vnd.google-apps.{objType}', 'parents': [parentFolderId]}
+    elif makeIfNone: #Create the object instead
+        metadata = {'name': objName, 'mimeType': f'{objType.value}', 'parents': [parentFolderId]}
         try:
             response = driveService.files().create(body=metadata, fields='id').execute()
         except Exception as e:
-            Log.log("find_object_make_if_none: %s" % str(e))
+            Log.log("find_object: %s" % str(e))
             return 0
         if 'id' in response:
             objectId = response['id']
@@ -177,9 +186,9 @@ def append_to_sheet(headerLine, dataLine, fileId, folderName, fileName):
             break
         except Exception as e:
             if type(e) == HttpError and e.resp.status == 404:
-                folderId = find_object_make_if_none('folder', folderName, 'root')
+                folderId = find_object(obj.folder, folderName, 'root')
                 if folderId:
-                    fileId = find_object_make_if_none('spreadsheet', fileName, folderId)
+                    fileId = find_object(obj.sheet, fileName, folderId)
             else:
                 Log.log("write_to_sheet: %s" % str(e))
 
@@ -200,3 +209,19 @@ def append_to_sheet(headerLine, dataLine, fileId, folderName, fileName):
 
     #Actually write our data to the file, finally.
     return write_to_sheet(fileId, nextLineNum, dataLine)
+
+def upload_text_file(pathToText:str):
+    baseName = os.path.basename(pathToText)
+    fileId = find_object(obj.text, baseName, 'root')
+
+    if fileId == 0:
+        return False
+
+    metadata = {'name': baseName}
+    media = MediaFileUpload(pathToText)
+    try:
+        driveService.files().update(fileId=fileId, body=metadata, media_body=media).execute()
+    except Exception as e:
+        Log.log("upload_text_file: %s" % str(e))
+        return False
+    return True
