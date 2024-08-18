@@ -33,10 +33,15 @@ debugMode = False #Set this if you want to ensure that you are not actually send
 #-------------------------------
 
 EmailHandler.debugOnly = debugMode
-GAPIHelper.get_valid_token()
-if not GAPIHelper.is_authorized():
-    print("All permissions are needed to properly run at the moment. (Maybe later we can feature piece meal!)")
-    exit()
+
+initFailCount = 0
+while True:
+    try:
+        if GAPIHelper.get_valid_token():
+            break
+    except:
+        initFailCount += 1
+        time.sleep(5 * min(initFailCount, 60)) #Back off to a maximum of retry every 5 minutes
 
 config.load_local_file()
 

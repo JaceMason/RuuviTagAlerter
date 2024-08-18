@@ -88,6 +88,9 @@ def generate_token_via_user():
         # TODO, I think we can put this message up on the oauth consent thingy
         print("WARNING: THIS APP DOES NOT ENCRYPT OR MAKE ANY EFFORT TO PROTECT YOUR CREDENTIALS. USE AT YOUR OWN RISK.")
         userToken = InstalledAppFlow.from_client_secrets_file(appTokenLoc, appScope).run_local_server(port=0)
+    except Warning as e:
+        print("Unable to get authorization to use Google Services. Please make sure you accept all permissions (Maybe in the future we can change this.)")
+        raise e
     except Exception as e:
         userToken = Credentials(None)
         raise e
