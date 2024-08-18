@@ -33,7 +33,7 @@ debugMode = False #Set this if you want to ensure that you are not actually send
 #-------------------------------
 
 EmailHandler.debugOnly = debugMode
-GAPIHelper.get_authorization()
+GAPIHelper.get_valid_token()
 if not GAPIHelper.is_authorized():
     print("All permissions are needed to properly run at the moment. (Maybe later we can feature piece meal!)")
     exit()

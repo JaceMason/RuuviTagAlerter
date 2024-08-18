@@ -85,19 +85,14 @@ def get_latest_config(recentMacs):
         tagConfigs.setdefault(tag, RuuviConfig())
 
     parentFolderId = gapi.find_object(gapi.obj.folder, "config", "root")
-    if parentFolderId == 0:
-        log("Unable to get the latest config")
-        return
+    if not parentFolderId:
+        parentFolderId = gapi.create_object(gapi.obj.folder, "config", "root")
 
     sheetId = gapi.find_object(gapi.obj.sheet, "RuuviConfig", parentFolderId)
-    if sheetId == 0:
-        log("Unable to get the latest config")
-        return
+    if not sheetId:
+        sheetId = gapi.create_object(gapi.obj.sheet, "RuuviConfig", parentFolderId)
 
     latestConfig = gapi.get_full_sheet(sheetId, "sheet1")
-    if latestConfig == None:
-        log("Unable to get the latest config")
-        return
 
     #Latest config is built up from the web first (taking priority), then anything local is added which should be just completely new tags.
     #The result is saved off in program memory, locally, and online
