@@ -92,6 +92,10 @@ def get_latest_config(recentMacs):
     if not sheetId:
         sheetId = gapi.create_object(gapi.obj.sheet, "RuuviConfig", parentFolderId)
 
+    if not sheetId:
+        log("Unable to generate the RuuviConfig on Drive for the first time.")
+        return
+
     latestConfig = gapi.get_full_sheet(sheetId, "sheet1")
 
     #Latest config is built up from the web first (taking priority), then anything local is added which should be just completely new tags.

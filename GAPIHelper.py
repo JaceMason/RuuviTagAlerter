@@ -185,6 +185,7 @@ def find_object(objType:obj, objName:str, parentFolderId:str):
 @authorize
 @backoff_retry
 def create_object(objType:obj, objName:str, parentFolderId:str)->str:
+    objectId = None
     metadata = {'name': objName, 'mimeType': f'{objType.value}', 'parents': [parentFolderId]}
     response = driveService.files().create(body=metadata, fields='id').execute()
     if 'id' in response:
@@ -242,9 +243,14 @@ def append_to_sheet_make_if_dne(headerLine, dataLine, fileId, folderName, fileNa
         folderId = find_object(obj.folder, folderName, 'root')
         if not folderId:
             folderId = create_object(obj.folder, folderName, 'root')
+            if not folderId:
+                raise(Exception(f"Something strange happened when we attempted to create the folder of {fileName} for appending"))
+
         fileId = find_object(obj.sheet, fileName, folderId)
         if not fileId:
             fileId = create_object(obj.sheet, fileName, folderId)
+            if not fileId:
+                raise(Exception(f"Something strange happened when we attempted to create the sheet {fileName} for appending"))
             listifiedHeader = list(csv.reader(StringIO(headerLine)))
             append_to_sheet(listifiedHeader, fileId) #Append our header into the newly created file
 
@@ -260,23 +266,19 @@ def update_file(pathToFile:str, fileId:str):
     baseName = os.path.basename(pathToFile)
     metadata = {'name': baseName}
     media = MediaFileUpload(pathToFile)
-    driveService.files().update(fileId=fileId, body=metadata, media_body=media).execute()
+    response = driveService.files().update(fileId=fileId, body=metadata, media_body=media).execute()
+    if 'id' in response and 'name' in response and response['name'] == baseName:
+        return True
+    else:
+        return False
 
 def upload_text_from_file(pathToText:str):
     if not os.path.exists(pathToText):
-        return
+        return False
     baseName = os.path.basename(pathToText)
     fileId = find_object(obj.text, baseName, 'root')
     if not fileId:
         fileId = create_object(obj.text, baseName, 'root')
-    update_file(pathToText, fileId)
-
-if __name__ == "__main__":
-    parentFolderId = find_object(obj.folder, "config", "root")
-    if not parentFolderId:
-        parentFolderId = create_object(obj.folder, "config", "root")
-    sheetId = find_object(obj.sheet, "RuuviConfig", parentFolderId)
-    if not sheetId:
-        parentFolderId = create_object(obj.sheet, "RuuviConfig", parentFolderId)
-
-    latestConfig = get_full_sheet(sheetId, "sheet1")
+        if not fileId:
+            raise(Exception(f"Unable to upload {pathToText}"))
+    return update_file(pathToText, fileId)

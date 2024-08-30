@@ -23,4 +23,4 @@ def log(message:str):
             logfile.writelines(lines)
 
 def push_log_to_drive():
-    gapi.upload_text_from_file(logFilePath)
+    return gapi.upload_text_from_file(logFilePath)

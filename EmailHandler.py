@@ -1,5 +1,6 @@
 import base64
 import os
+import Log
 
 from email.mime.text import MIMEText
 
@@ -43,5 +44,5 @@ def send_message(subject:str, messageText:str, rxEmails:list[str] = None):
         message = (GAPIHelper.gmailService.users().messages().send(userId='me', body=rawMessage).execute())
         return message['id']
     except Exception as error:
-        print(error)
+        Log.log(error)
         return None

@@ -53,7 +53,7 @@ for mac, cfg in config.tagConfigs.items():
     ruuviTagDataHandler[mac] = DataHandler(mac, emailAlertTimeoutHr)
 
 def send_timeout_alert(mac, lastCheckinTimeMin:float, sensorName:str, neverCheckedIn:bool):
-    if time.time() <  lastTimeoutEmailDict[mac] + timeoutEmailDelayTimeSec:
+    if time.time() < lastTimeoutEmailDict[mac] + timeoutEmailDelayTimeSec:
         return #Prevent email spam when the tag hasn't checked in
 
     message = ""
@@ -120,13 +120,17 @@ async def main():
             failcount += 1
             Log.log(str(e))
 
-        if time.time() > nextErrorLogUpload:
-            if Log.push_log_to_drive():
-                nextErrorLogUpload = time.time() + uploadErrorLogIntervalSec
-
         #Bit of backoff. Don't ever want to terminate the program, but don't want to be spamming the network
         if failcount > 1:
             await asyncio.sleep(60 * 10 * min(failcount, 6))
+
+        try:
+            if time.time() > nextErrorLogUpload:
+                if Log.push_log_to_drive():
+                    nextErrorLogUpload = time.time() + uploadErrorLogIntervalSec
+        except:
+            Log.log(str(e))
+
 
 
 if __name__ == "__main__":
