@@ -128,7 +128,7 @@ async def main():
             if time.time() > nextErrorLogUpload:
                 if Log.push_log_to_drive():
                     nextErrorLogUpload = time.time() + uploadErrorLogIntervalSec
-        except:
+        except Exception as e:
             Log.log(str(e))
 
 
